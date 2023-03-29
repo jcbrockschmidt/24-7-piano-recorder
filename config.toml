@@ -1,0 +1,23 @@
+[input]
+# Index of device to listen to. Find using ./list_devices.pr
+device_index = 6
+# WARNING: Sample rates of 176400 and 192000 causes distortion and frame skipping.
+sample_rate = 96000
+# Number of channels to record
+channels = 3
+
+[detection]
+# Which channel triggers recording
+detect_channel = 3
+# Decibel above which to trigger a recording
+db_thres = 6
+# Duration of moving window for computing decibels, in milliseconds.
+db_sample_window_ms = 5000
+# How long the decibel threshold needs to be passes before recording is triggered, in milliseconds.
+db_sustain_ms = 5000
+# How long the decibel measure must be under the threshold before stopping a recording, in milliseconds.
+time_until_stop_ms = 30000
+
+[recording]
+# Duration of audio that should be included in recordings from before the decibel threshold is passed.
+rewind_ms = 10000

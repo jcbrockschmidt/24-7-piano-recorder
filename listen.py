@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import audioop
-from datetime import datetime
+from datetime import datetime, timedelta
 from math import log10
 import numpy as np
 import pyaudio
@@ -11,7 +11,6 @@ import wave
 
 CONFIG_PATH = 'config.toml'
 
-# TODO: Derive this from the device
 FORMAT = pyaudio.paInt16
 CHUNK_SIZE = 512
 
@@ -105,8 +104,11 @@ def listen(config):
                     is_recording = False
                     save_path = get_save_path(recording_start)
                     save_frames(recording_frames, input_cfg['channels'], input_cfg['sample_rate'], save_path)
+                    recording_dur = timedelta(
+                        milliseconds=len(recording_frames) / (input_cfg['sample_rate'] * width * input_cfg['channels']) * 1000
+                    )
                     recording_frames = None
-                    print(f'Saved to {save_path}')
+                    print(f'Saved to {save_path} with duration of {recording_dur}')
 
     print('Done listening')
 

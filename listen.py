@@ -8,25 +8,28 @@ import pyaudio
 import time
 import wave
 
-DEVICE_INDEX = 23
+DEVICE_INDEX = 6
 FORMAT = pyaudio.paInt16
-CHANNELS = 2
-RATE = 48000
+CHANNELS = 3
+# WARNING: 176400 and 192000 causes distortion and frame skipping?
+RATE = 96000
 CHUNK_SIZE = 512
 
 # TODO: use later if necessary
 # HZ_LOWPASS = 27.5
 # HZ_HIGHPASS = 4186
 
+# Which channel triggers recording
+DETECT_CHANNEL = 3
 # Decibel above which to trigger a recording
-DB_THRES = 50
+DB_THRES = 6
 # Duration of moving window for computing decibels, in milliseconds.
-DB_SAMPLE_WINDOW_MS = 1000
+DB_SAMPLE_WINDOW_MS = 5000
 # How long the decibel threshold needs to be passes before recording is triggered, in milliseconds.
-DB_SUSTAIN_MS = 2000
+DB_SUSTAIN_MS = 5000
 
-REWIND_MS = 5000
-MS_UNTIL_STOP = 5000
+REWIND_MS = 10000
+MS_UNTIL_STOP = 30000
 
 def get_save_path(dt):
     return dt.strftime('%Y-%m-%d %H:%M:%S.wav')
@@ -59,8 +62,8 @@ def listen():
     )
 
     width = audio.get_sample_size(FORMAT)
-    buffer = np.empty((2, 0), np.int16)
-    db_samples = np.empty((2, 0), np.double)
+    buffer = np.empty((CHANNELS, 0), np.int16)
+    db_samples = np.empty((CHANNELS, 0), np.double)
     is_listening = False
     is_recording = False
     recording_start = None
@@ -68,14 +71,14 @@ def listen():
     rewind_buffer_size = int((RATE * REWIND_MS / 1000) / CHUNK_SIZE) * CHUNK_SIZE
     db_sample_size = int((RATE * DB_SAMPLE_WINDOW_MS / 1000) / CHUNK_SIZE) * CHUNK_SIZE
     full_buffer_size = max(rewind_buffer_size, db_sample_size)
-    chunk_ms = (1 / RATE) * CHUNK_SIZE * width * 1000
+    chunk_ms = CHUNK_SIZE * width * 1000 / RATE
     time_loud = 0
     time_quiet = 0
 
     print(f'Buffering...')
     while True:
-        raw_data = stream.read(CHUNK_SIZE)
-        data = np.frombuffer(raw_data, dtype=np.int16).reshape((2, CHUNK_SIZE), order='F')
+        raw_data = stream.read(CHUNK_SIZE, exception_on_overflow=False)
+        data = np.frombuffer(raw_data, dtype=np.int16).reshape((CHANNELS, CHUNK_SIZE), order='F')
         cur_buffer_size = len(buffer[0])
         if cur_buffer_size >= full_buffer_size:
             buffer = buffer[:, -full_buffer_size+CHUNK_SIZE:]
@@ -85,12 +88,10 @@ def listen():
         buffer = np.append(buffer, data, axis=1)
 
         if cur_buffer_size == full_buffer_size:
-            dbs = [get_rms_db_for_chunk(buffer[ch][-db_sample_size:], width) for ch in range(CHANNELS)]
-            # print('ch1:', dbs[0]) # DEBUG
-            # print('ch2:', dbs[1]) # DEBUG
+            db = get_rms_db_for_chunk(buffer[DETECT_CHANNEL - 1][-db_sample_size:], width)
             if is_recording:
                 recording_frames += raw_data
-            if max(dbs) > DB_THRES:
+            if db > DB_THRES:
                 time_loud += chunk_ms
                 time_quiet = 0
 
@@ -100,7 +101,7 @@ def listen():
                     recording_start = datetime.utcnow()
                     recording_frames = bytearray(buffer[:, -rewind_buffer_size:].flatten('F'))
 
-            if max(dbs) < DB_THRES and is_recording:
+            if db < DB_THRES and is_recording:
                 time_loud = 0
                 time_quiet += chunk_ms
                 if time_quiet >= MS_UNTIL_STOP:

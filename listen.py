@@ -23,7 +23,7 @@ def read_config(config_path):
         return toml.load(f)
 
 def get_save_path(dt):
-    return dt.strftime('%Y-%m-%d %H:%M:%S.wav')
+    return dt.astimezone().strftime('%Y-%m-%d %H:%M:%S %Z.wav')
 
 def get_rms_db_for_chunk(data, width):
     rms = audioop.rms(data, width)
@@ -93,7 +93,7 @@ def listen(config):
                 if (not is_recording) and time_loud >= detect_cfg['db_sustain_ms']:
                     print('Recording...')
                     is_recording = True
-                    recording_start = datetime.utcnow()
+                    recording_start = datetime.now()
                     recording_frames = bytearray(buffer[:, -rewind_buffer_size:].flatten('F'))
 
             if db < detect_cfg['db_thres'] and is_recording:

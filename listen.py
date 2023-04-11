@@ -4,6 +4,7 @@ import audioop
 from datetime import datetime, timedelta
 from math import log10
 import numpy as np
+from os import path
 import pyaudio
 import time
 import toml
@@ -22,8 +23,9 @@ def read_config(config_path):
     with open(config_path, 'r') as f:
         return toml.load(f)
 
-def get_save_path(dt):
-    return dt.astimezone().strftime('%Y-%m-%d %H:%M:%S %Z.wav')
+def get_save_path(dt, parent_dir):
+    save_name = dt.astimezone().strftime('%Y-%m-%d %H:%M:%S %Z.wav')
+    return path.join(path.realpath(parent_dir), save_name)
 
 def get_rms_db_for_chunk(data, width):
     rms = audioop.rms(data, width)
@@ -41,6 +43,7 @@ def listen(config):
     input_cfg = config['input']
     detect_cfg = config['detection']
     rec_cfg = config['recording']
+    output_cfg = config['output']
 
     audio = pyaudio.PyAudio()
 
@@ -102,7 +105,7 @@ def listen(config):
                 if time_quiet >= detect_cfg['time_until_stop_ms']:
                     print('Done recording. Saving...')
                     is_recording = False
-                    save_path = get_save_path(recording_start)
+                    save_path = get_save_path(recording_start, output_cfg['recordings_dir'])
                     save_frames(recording_frames, input_cfg['channels'], input_cfg['sample_rate'], save_path)
                     recording_dur = timedelta(
                         milliseconds=len(recording_frames) / (input_cfg['sample_rate'] * width * input_cfg['channels']) * 1000

@@ -21,3 +21,7 @@ time_until_stop_ms = 30000
 [recording]
 # Duration of audio that should be included in recordings from before the decibel threshold is passed.
 rewind_ms = 10000
+
+[output]
+# Directory to save recordings to. Relative paths are relative to the working directory when running the script.
+recordings_dir = 'recordings'

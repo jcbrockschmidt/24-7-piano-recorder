@@ -1,8 +1,10 @@
 [input]
-# Index of device to listen to. Find using ./list_devices.pr
+# Index of device to listen to. Find using ./list_devices.py
 device_index = 6
 # WARNING: Sample rates of 176400 and 192000 causes distortion and frame skipping.
 sample_rate = 96000
+# Either 8, 16, or 32
+bit_depth = 32
 # Number of channels to record
 channels = 3
 
@@ -10,7 +12,7 @@ channels = 3
 # Which channel triggers recording
 detect_channel = 3
 # Decibel above which to trigger a recording
-db_thres = 6
+db_thres = -90
 # Duration of moving window for computing decibels, in milliseconds.
 db_sample_window_ms = 5000
 # How long the decibel threshold needs to be passes before recording is triggered, in milliseconds.

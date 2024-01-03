@@ -5,6 +5,8 @@ device_index = 4
 sample_rate = 96000
 # Bit depth of audio input. Either 8, 16, or 32.
 bit_depth = 32
+# Buffer size. Should be a power of 2.
+buffer_size = 4096
 # Number of channels to record.
 channels = 3
 

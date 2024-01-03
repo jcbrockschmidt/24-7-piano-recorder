@@ -12,8 +12,6 @@ import wave
 
 CONFIG_PATH = 'config.toml'
 
-NUM_FRAMES = 512
-
 BIT_DEPTH_TO_FORMAT = {
     8: pyaudio.paInt8,
     16: pyaudio.paInt16,
@@ -64,6 +62,7 @@ def listen(config):
     bit_depth = input_cfg['bit_depth']
     pyaudio_format = BIT_DEPTH_TO_FORMAT[bit_depth]
     bit_depth_dtype = BIT_DEPTH_TO_NP_DTYPE[bit_depth]
+    buffer_size = input_cfg['buffer_size']
     channels = input_cfg['channels']
     sample_rate = input_cfg['sample_rate']
 
@@ -71,9 +70,10 @@ def listen(config):
 
     device_name = audio.get_device_info_by_index(input_cfg['device_index']).get('name')
     print(f'Using device "{device_name}"')
+    print(f'{channels} channels')
     print(f'Sample rate {sample_rate} Hz')
     print(f'Bit depth {bit_depth}')
-    print(f'{channels} channels')
+    print(f'Buffer size {buffer_size}')
     print()
 
 
@@ -83,7 +83,7 @@ def listen(config):
         format=pyaudio_format,
         channels=channels,
         rate=sample_rate,
-        frames_per_buffer=NUM_FRAMES,
+        frames_per_buffer=buffer_size,
     )
 
     width = audio.get_sample_size(pyaudio_format)
@@ -93,20 +93,20 @@ def listen(config):
     is_recording = False
     recording_start = None
     recording_frames = None
-    rewind_buffer_size = int((sample_rate * rec_cfg['rewind_ms'] / 1000) / NUM_FRAMES) * NUM_FRAMES
-    db_sample_size = int((sample_rate * detect_cfg['db_sample_window_ms'] / 1000) / NUM_FRAMES) * NUM_FRAMES
+    rewind_buffer_size = int((sample_rate * rec_cfg['rewind_ms'] / 1000) / buffer_size) * buffer_size
+    db_sample_size = int((sample_rate * detect_cfg['db_sample_window_ms'] / 1000) / buffer_size) * buffer_size
     full_buffer_size = max(rewind_buffer_size, db_sample_size)
-    chunk_ms = NUM_FRAMES / sample_rate * 1000
+    chunk_ms = buffer_size / sample_rate * 1000
     time_loud = 0
     time_quiet = 0
 
     print(f'Buffering...')
     while True:
-        raw_data = stream.read(NUM_FRAMES, exception_on_overflow=False)
-        data = np.frombuffer(raw_data, dtype=bit_depth_dtype).reshape((channels, NUM_FRAMES), order='F')
+        raw_data = stream.read(buffer_size, exception_on_overflow=False)
+        data = np.frombuffer(raw_data, dtype=bit_depth_dtype).reshape((channels, buffer_size), order='F')
         cur_buffer_size = len(buffer[0])
         if cur_buffer_size >= full_buffer_size:
-            buffer = buffer[:, -full_buffer_size+NUM_FRAMES:]
+            buffer = buffer[:, -full_buffer_size+buffer_size:]
             if not is_listening:
                 print(f'Listening...')
                 is_listening = True
@@ -124,6 +124,7 @@ def listen(config):
                     print('Recording...')
                     is_recording = True
                     recording_start = datetime.now()
+
                     recording_frames = bytearray(buffer[:, -rewind_buffer_size:].flatten('F'))
 
             if db < detect_cfg['db_thres'] and is_recording:
